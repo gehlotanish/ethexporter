@@ -5,6 +5,8 @@ on:
     branches: ["**"]
   push:
     branches: ["main"]
+    paths:
+      - 'main.go'
 
 jobs:
   pre-commit:
