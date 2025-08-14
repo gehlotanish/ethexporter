@@ -1,0 +1,43 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+
+  - repo: local
+    hooks:
+      - id: go-fmt-all
+        name: go fmt (module)
+        entry: bash -lc 'if [ -f go.mod ]; then go fmt ./...; else echo "no go.mod, skipping"; fi'
+        language: system
+        pass_filenames: false
+      - id: go-vet-all
+        name: go vet (module)
+        entry: bash -lc 'if [ -f go.mod ]; then go vet ./...; else echo "no go.mod, skipping"; fi'
+        language: system
+        pass_filenames: false
+      - id: go-build-all
+        name: go build (module)
+        entry: bash -lc 'if [ -f go.mod ]; then GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ./...; else echo "no go.mod, skipping"; fi'
+        language: system
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: hadolint-docker
+        name: hadolint (Dockerfile linter via container)
+        language: docker_image
+        entry: hadolint/hadolint:latest hadolint
+        files: (?i)(^|/)(dockerfile|Dockerfile)$
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: docker-compose-validate
+        name: docker-compose validate
+        entry: bash -lc 'docker compose -f docker/docker-compose.yaml config -q'
+        language: system
+        pass_filenames: false
+        files: ^docker/docker-compose\.yaml$
