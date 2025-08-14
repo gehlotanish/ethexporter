@@ -52,6 +52,7 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
+          no-cache: true
           push: true
           platforms: linux/amd64
           tags: |
