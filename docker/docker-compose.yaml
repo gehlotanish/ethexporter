@@ -1,16 +1,17 @@
 version: "3.9"
 services:
   ethexporter:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    image: ethexporter:latest
+    # build:
+    #   context: ..
+    #   dockerfile: docker/Dockerfile
+    image: ghcr.io/gehlotanish/ethexporter:latest
+    platform: linux/amd64
     environment:
       RPC: "https://eth-mainnet.public.blastapi.io"
       PORT: "9100"
       SLEEP_SECONDS: "15"
-      ethaddr_wallet1: "0xYourAddress1"
-      ETHADDR_wallet2: "0xYourAddress2"
+      ethaddr_wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
+      ETHADDR_wallet2: "0xa23D506848C30ea091B51258E00b1dC61BcD5cDb"
     ports:
       - "9100:9100"
     restart: unless-stopped
