@@ -10,16 +10,17 @@ services:
     environment:
       CONFIG_FILE: "/app/config.yaml"
 
-      # Mainnet configuration via environment variables
+      # Mainnet
       NETWORK_MAINNET_RPC: "https://eth-mainnet.public.blastapi.io"
       NETWORK_MAINNET_CHAIN_ID: "1"
-      NETWORK_MAINNET_ADDR_wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
-      NETWORK_MAINNET_ADDR_wallet2: "0xa23D506848C30ea091B51258E00b1dC61BcD5cDb"
 
-      # Surge Hoodi configuration examples (commented out - use YAML config instead)
-      # NETWORK_SURGE_HOODI_RPC: "https://l2-rpc.staging.surge.wtf"
-      # NETWORK_SURGE_HOODI_CHAIN_ID: "763374"
-      # NETWORK_SURGE_HOODI_ADDR_wallet: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
+      # Surge Hoodi
+      NETWORK_HOODI_RPC: "https://l2-rpc.staging.surge.wtf"
+      NETWORK_HOODI_CHAIN_ID: "763374"
+
+      # Surge Hoodi Staging
+      NETWORK_HOODI_STAGING_RPC: "https://l2-rpc.hoodi.surge.wtf"
+      NETWORK_HOODI_STAGING_CHAIN_ID: "763375"
 
     ports:
       - "9100:9100"

@@ -3,14 +3,16 @@ global:
   sleep_seconds: ${SLEEP_SECONDS:-15}
 
 networks:
-  surge_hoodi:
-    rpc: "https://l2-rpc.staging.surge.wtf"
-    chain_id: "763374"
+
+  mainnet:
+    addresses:
+      wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
+      wallet2: "0xa23D506848C30ea091B51258E00b1dC61BcD5cDb"
+
+  hoodi:
     addresses:
       wallet: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
 
-  surge_hoodi_staging:
-    rpc: "https://l2-rpc.hoodi.surge.wtf"
-    chain_id: "763375"
+  hoodi_staging:
     addresses:
       wallet_surge: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"

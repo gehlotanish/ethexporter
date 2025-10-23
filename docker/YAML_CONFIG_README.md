@@ -1,15 +1,16 @@
 # YAML Configuration Support
 
-ETHexporter now supports configuration via YAML files, making it much easier to manage multiple networks and addresses without setting numerous environment variables.
+ETHexporter supports flexible configuration via YAML files with mixed configuration support, making it easy to manage multiple networks and addresses.
 
 ## Features
 
-- **YAML Configuration**: Define networks and addresses in a single YAML file
+- **Mixed Configuration**: RPC endpoints via environment variables, addresses via YAML
+- **YAML Configuration**: Define addresses in a single YAML file
 - **Environment Variable Substitution**: Use `${VAR_NAME}` or `${VAR_NAME:-default}` syntax in YAML
 - **Backward Compatibility**: Still supports environment variables if no YAML file is found
 - **Chain ID Validation**: Automatic chain ID detection and validation
 - **Clean Metrics**: Standardized metric names with network info in labels
-- **Mixed Configuration**: Combine YAML with environment variable overrides
+- **Flexible Setup**: Choose between mixed, pure YAML, or environment-only configuration
 
 ## Configuration File
 
@@ -19,6 +20,20 @@ ETHexporter now supports configuration via YAML files, making it much easier to 
 
 ### YAML Structure
 
+#### Mixed Configuration (Recommended)
+```yaml
+global:
+  port: "${PORT:-9100}"              # HTTP server port
+  sleep_seconds: ${SLEEP_SECONDS:-15} # Update interval in seconds
+
+networks:
+  network_name:
+    addresses:
+      wallet_name: "0x..."
+      another_wallet: "0x..."
+```
+
+#### Pure YAML Configuration
 ```yaml
 global:
   port: "9100"              # HTTP server port
@@ -64,45 +79,61 @@ networks:
 
 ## Example Configuration
 
-### With Environment Variables
+### Mixed Configuration (Recommended)
+
+**YAML Config (config.yaml):**
 ```yaml
 global:
   port: "${PORT:-9100}"
   sleep_seconds: ${SLEEP_SECONDS:-15}
-  prefix: "${PREFIX:-}"
 
 networks:
   mainnet:
-    rpc: "${MAINNET_RPC:-https://eth-mainnet.public.blastapi.io}"
-    prefix: "${MAINNET_PREFIX:-mainnet_}"
-    chain_id: "${MAINNET_CHAIN_ID:-1}"
     addresses:
-      wallet1: "${MAINNET_WALLET1:-0xb2F801913949c3eecDfc814CCc743618efF1f8c8}"
-      wallet2: "${MAINNET_WALLET2:-0xa23D506848C30ea091B51258E00b1dC61BcD5cDb}"
+      wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
+      wallet2: "0xa23D506848C30ea091B51258E00b1dC61BcD5cDb"
 
-  surge_hoodi:
-    rpc: "${SURGE_HOODI_RPC:-https://l2-rpc.staging.surge.wtf}"
-    prefix: "${SURGE_HOODI_PREFIX:-surge_hoodi_}"
-    chain_id: "${SURGE_HOODI_CHAIN_ID:-763374}"
+  hoodi:
     addresses:
-      surge_hoodi_wallet: "${SURGE_HOODI_WALLET:-0x3bc256069FF9af461F3e04494A3ece3f62F183fC}"
+      wallet: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
+
+  hoodi_staging:
+    addresses:
+      wallet_surge: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
 ```
 
-### Static Configuration (No Environment Variables)
+**Environment Variables (docker-compose.yaml or shell):**
+```bash
+# Network RPC and Chain ID configuration
+NETWORK_MAINNET_RPC="https://eth-mainnet.public.blastapi.io"
+NETWORK_MAINNET_CHAIN_ID="1"
+
+NETWORK_HOODI_RPC="https://l2-rpc.staging.surge.wtf"
+NETWORK_HOODI_CHAIN_ID="763374"
+
+NETWORK_HOODI_STAGING_RPC="https://l2-rpc.hoodi.surge.wtf"
+NETWORK_HOODI_STAGING_CHAIN_ID="763375"
+```
+
+### Pure YAML Configuration
 ```yaml
 global:
   port: "9100"
   sleep_seconds: 15
-  prefix: ""
 
 networks:
   mainnet:
     rpc: "https://eth-mainnet.public.blastapi.io"
-    prefix: "mainnet_"
     chain_id: "1"
     addresses:
       wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
       wallet2: "0xa23D506848C30ea091B51258E00b1dC61BcD5cDb"
+
+  surge_hoodi:
+    rpc: "https://l2-rpc.staging.surge.wtf"
+    chain_id: "763374"
+    addresses:
+      wallet: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
 ```
 
 ## Usage
@@ -119,14 +150,43 @@ nano config.yaml
 go run main.go
 ```
 
-### 2. Docker Compose
+### 2. Docker Compose (Mixed Configuration)
 ```yaml
 version: "3.9"
 services:
   ethexporter:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    image: ghcr.io/gehlotanish/ethexporter:latest
+    platform: linux/amd64
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      CONFIG_FILE: "/app/config.yaml"
+
+      # Network RPC and Chain ID configuration via environment variables
+      # Wallet addresses are configured in config.yaml
+
+      # Mainnet
+      NETWORK_MAINNET_RPC: "https://eth-mainnet.public.blastapi.io"
+      NETWORK_MAINNET_CHAIN_ID: "1"
+
+      # Surge Hoodi
+      NETWORK_HOODI_RPC: "https://l2-rpc.staging.surge.wtf"
+      NETWORK_HOODI_CHAIN_ID: "763374"
+
+      # Surge Hoodi Staging
+      NETWORK_HOODI_STAGING_RPC: "https://l2-rpc.hoodi.surge.wtf"
+      NETWORK_HOODI_STAGING_CHAIN_ID: "763375"
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+```
+
+### 3. Docker with Pure YAML Configuration
+```yaml
+version: "3.9"
+services:
+  ethexporter:
+    image: ghcr.io/gehlotanish/ethexporter:latest
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     environment:
@@ -136,20 +196,6 @@ services:
     restart: unless-stopped
 ```
 
-### 3. Docker with Custom Config
-```yaml
-version: "3.9"
-services:
-  ethexporter:
-    image: ghcr.io/gehlotanish/ethexporter:latest
-    volumes:
-      - ./my-config.yaml:/app/config.yaml:ro
-    environment:
-      CONFIG_FILE: "/app/config.yaml"
-    ports:
-      - "9100:9100"
-```
-
 ## Configuration Options
 
 ### Global Settings
@@ -157,13 +203,16 @@ services:
 |-------|------|---------|-------------|
 | `port` | string | "9100" | HTTP server port |
 | `sleep_seconds` | integer | 15 | Update interval in seconds |
-| `prefix` | string | "" | Global prefix for metrics |
 
-### Network Settings
+### Network Settings (Mixed Configuration)
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `addresses` | map | ✅ | Addresses to monitor |
+
+### Network Settings (Pure YAML Configuration)
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `rpc` | string | ✅ | RPC endpoint URL |
-| `prefix` | string | ❌ | Network-specific metric prefix |
 | `chain_id` | string | ❌ | Expected chain ID (for validation) |
 | `addresses` | map | ✅ | Addresses to monitor |
 
@@ -172,23 +221,42 @@ services:
 With YAML configuration, metrics will include network and chain_id labels:
 
 ```
-mainnet_eth_balance{name="wallet1",address="0xb2F801913949c3eecDfc814CCc743618efF1f8c8",network="mainnet",chain_id="1"} 1.5
-surge_hoodi_eth_balance{name="surge_hoodi_wallet",address="0x3bc256069FF9af461F3e04494A3ece3f62F183fC",network="surge_hoodi",chain_id="763374"} 999886502.8
+eth_balance{name="wallet1",address="0xb2F801913949c3eecDfc814CCc743618efF1f8c8",network="mainnet",chain_id="1"} 1.5
+eth_balance{name="wallet",address="0x3bc256069FF9af461F3e04494A3ece3f62F183fC",network="hoodi",chain_id="763374"} 10
+eth_balance{name="wallet_surge",address="0x3bc256069FF9af461F3e04494A3ece3f62F183fC",network="hoodi_staging",chain_id="763375"} 1003.779903
 ```
 
 ## Migration from Environment Variables
 
-### Before (Environment Variables)
+### Before (Environment Variables Only)
 ```bash
 NETWORK_MAINNET_RPC="https://eth-mainnet.public.blastapi.io"
-NETWORK_MAINNET_PREFIX="mainnet_"
 NETWORK_MAINNET_CHAIN_ID="1"
 NETWORK_MAINNET_ADDR_wallet1="0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
 PORT="9100"
 SLEEP_SECONDS="15"
 ```
 
-### After (YAML Configuration)
+### After (Mixed Configuration - Recommended)
+**YAML Config (config.yaml):**
+```yaml
+global:
+  port: "${PORT:-9100}"
+  sleep_seconds: ${SLEEP_SECONDS:-15}
+
+networks:
+  mainnet:
+    addresses:
+      wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
+```
+
+**Environment Variables:**
+```bash
+NETWORK_MAINNET_RPC="https://eth-mainnet.public.blastapi.io"
+NETWORK_MAINNET_CHAIN_ID="1"
+```
+
+### After (Pure YAML Configuration)
 ```yaml
 global:
   port: "9100"
@@ -197,7 +265,6 @@ global:
 networks:
   mainnet:
     rpc: "https://eth-mainnet.public.blastapi.io"
-    prefix: "mainnet_"
     chain_id: "1"
     addresses:
       wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
@@ -207,19 +274,26 @@ networks:
 
 ETHexporter supports multiple configuration modes:
 
-### 1. **YAML with Environment Variables** (Recommended)
+### 1. **Mixed Configuration** (Recommended)
+**RPC endpoints and Chain IDs** → Environment variables
+**Wallet addresses** → YAML config
+
 ```yaml
 # config.yaml
 global:
   port: "${PORT:-9100}"
+  sleep_seconds: ${SLEEP_SECONDS:-15}
+
 networks:
   mainnet:
-    rpc: "${MAINNET_RPC:-https://eth-mainnet.public.blastapi.io}"
+    addresses:
+      wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
 ```
 ```bash
 # Set environment variables
-export MAINNET_RPC="https://custom-rpc.com"
-export PORT="9101"
+export NETWORK_MAINNET_RPC="https://eth-mainnet.public.blastapi.io"
+export NETWORK_MAINNET_CHAIN_ID="1"
+export CONFIG_FILE="config.yaml"
 go run main.go
 ```
 
@@ -228,9 +302,14 @@ go run main.go
 # config.yaml
 global:
   port: "9100"
+  sleep_seconds: 15
+
 networks:
   mainnet:
     rpc: "https://eth-mainnet.public.blastapi.io"
+    chain_id: "1"
+    addresses:
+      wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
 ```
 ```bash
 go run main.go
@@ -239,7 +318,8 @@ go run main.go
 ### 3. **Environment Variables Only** (Legacy)
 ```bash
 export NETWORK_MAINNET_RPC="https://eth-mainnet.public.blastapi.io"
-export NETWORK_MAINNET_PREFIX="mainnet_"
+export NETWORK_MAINNET_CHAIN_ID="1"
+export NETWORK_MAINNET_ADDR_wallet1="0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
 export PORT="9100"
 go run main.go
 ```
@@ -302,9 +382,11 @@ Warning: Invalid address for network mainnet: wallet1
 
 ## Best Practices
 
-1. **Use descriptive network names**: `mainnet`, `testnet`, `staging`
-2. **Validate chain IDs**: Always specify expected chain IDs for validation
-3. **Organize addresses**: Use meaningful names for addresses
-4. **Version control**: Keep your config files in version control
-5. **Environment-specific configs**: Use different config files for different environments
-6. **Clean metrics**: Network information is automatically included in metric labels
+1. **Use descriptive network names**: `mainnet`, `hoodi`, `hoodi_staging`
+2. **Mixed Configuration**: Use environment variables for RPC endpoints, YAML for addresses
+3. **Validate chain IDs**: Always specify expected chain IDs for validation
+4. **Organize addresses**: Use meaningful names for addresses
+5. **Version control**: Keep your config files in version control
+6. **Environment-specific configs**: Use different config files for different environments
+7. **Clean metrics**: Network information is automatically included in metric labels
+8. **Docker Compose**: Use docker-compose.yaml for easy deployment with mixed configuration

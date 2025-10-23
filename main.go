@@ -155,6 +155,11 @@ func InitializeNetworksFromYAML(config *YAMLConfig) error {
 	networks = make(map[string]*NetworkConfig)
 
 	for networkName, networkConfig := range config.Networks {
+		// Skip networks that don't have RPC endpoints (they'll be loaded from environment variables)
+		if networkConfig.RPC == "" {
+			continue
+		}
+
 		var expectedChainID *big.Int
 		if networkConfig.ChainID != "" {
 			chainID, ok := new(big.Int).SetString(networkConfig.ChainID, 10)
@@ -201,6 +206,35 @@ func InitializeNetworksFromYAML(config *YAMLConfig) error {
 		}
 	}
 
+	return nil
+}
+
+func LoadAddressesFromYAML(config *YAMLConfig) error {
+	for networkName, networkConfig := range config.Networks {
+		// Only load addresses for networks that don't have RPC endpoints
+		// (networks with RPC endpoints are handled in InitializeNetworksFromYAML)
+		if networkConfig.RPC != "" {
+			continue
+		}
+
+		// Only load addresses if the network exists (was loaded from environment variables)
+		if _, exists := networks[networkName]; !exists {
+			continue
+		}
+
+		for addrName, addrValue := range networkConfig.Addresses {
+			if common.IsHexAddress(addrValue) {
+				w := &Watching{
+					Name:           addrName,
+					Address:        addrValue,
+					Network:        networkName,
+					Balance:        "0",
+					BalancePending: "0",
+				}
+				allWatching = append(allWatching, w)
+			}
+		}
+	}
 	return nil
 }
 
@@ -511,6 +545,11 @@ func main() {
 		err = InitializeNetworks()
 		if err != nil {
 			fmt.Printf("Warning: Failed to load additional networks from environment: %v\n", err)
+		}
+
+		err = LoadAddressesFromYAML(config)
+		if err != nil {
+			fmt.Printf("Warning: Failed to load addresses from YAML: %v\n", err)
 		}
 
 		err = OpenAddressesFromEnv()

@@ -1,6 +1,6 @@
 # ethexporter
 
-Advanced Ethereum wallet exporter that supports multiple networks, YAML configuration, and exposes per-address metrics over HTTP for Prometheus scraping.
+Advanced Ethereum wallet exporter that supports multiple networks with mixed configuration (YAML + Environment Variables), and exposes per-address metrics over HTTP for Prometheus scraping.
 
 ### Build
 
@@ -10,9 +10,59 @@ go build
 
 ### Configure
 
-#### YAML Configuration (Recommended)
+#### Mixed Configuration (Recommended)
 
-Create a `config.yaml` file:
+The application supports a flexible mixed configuration where:
+- **RPC endpoints and Chain IDs** are configured via environment variables
+- **Wallet addresses** are configured via YAML file
+
+##### 1. Create a `config.yaml` file:
+
+```yaml
+global:
+  port: "${PORT:-9100}"
+  sleep_seconds: ${SLEEP_SECONDS:-15}
+
+networks:
+  mainnet:
+    addresses:
+      wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
+      wallet2: "0xa23D506848C30ea091B51258E00b1dC61BcD5cDb"
+
+  hoodi:
+    addresses:
+      wallet: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
+
+  hoodi_staging:
+    addresses:
+      wallet_surge: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
+```
+
+##### 2. Set environment variables for RPC endpoints and Chain IDs:
+
+```bash
+# Network RPC and Chain ID configuration
+export NETWORK_MAINNET_RPC="https://eth-mainnet.public.blastapi.io"
+export NETWORK_MAINNET_CHAIN_ID="1"
+
+export NETWORK_HOODI_RPC="https://l2-rpc.staging.surge.wtf"
+export NETWORK_HOODI_CHAIN_ID="763374"
+
+export NETWORK_HOODI_STAGING_RPC="https://l2-rpc.hoodi.surge.wtf"
+export NETWORK_HOODI_STAGING_CHAIN_ID="763375"
+
+# Optional: Override port and sleep interval
+export PORT=9100
+export SLEEP_SECONDS=15
+
+# Run the application
+export CONFIG_FILE="config.yaml"
+./ethexporter
+```
+
+#### Pure YAML Configuration
+
+For simpler setups, you can configure everything in YAML:
 
 ```yaml
 global:
@@ -34,7 +84,7 @@ networks:
       wallet: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
 ```
 
-#### Environment Variables (Legacy)
+#### Environment Variables Only (Legacy)
 
 Set environment variables before running:
 
@@ -57,16 +107,15 @@ export ETHADDR_ops=0xYourAddress2
 ./ethexporter
 ```
 
-Refresh interval: configurable via SLEEP_SECONDS (default 15 seconds).
-
 ## Features
 
 - **Multi-Network Support**: Monitor addresses across different Ethereum networks
+- **Mixed Configuration**: RPC endpoints via environment variables, addresses via YAML
 - **YAML Configuration**: Clean configuration file with environment variable substitution
-- **Mixed Configuration**: Combine YAML config with environment variables
 - **Chain ID Validation**: Automatic chain ID detection and validation
 - **Clean Metrics**: Standardized metric names with network info in labels
 - **Backward Compatibility**: Legacy environment variable configuration still works
+- **Docker Support**: Ready-to-use Docker configuration with docker-compose
 
 ### Metrics
 
@@ -107,12 +156,66 @@ curl -s http://127.0.0.1:9100/metrics | head -n 40
 
 ### Docker
 
+#### Using Docker Compose (Recommended)
+
+Create a `docker-compose.yaml` file:
+
+```yaml
+version: "3.9"
+services:
+  ethexporter:
+    image: ghcr.io/gehlotanish/ethexporter:latest
+    platform: linux/amd64
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      CONFIG_FILE: "/app/config.yaml"
+
+      # Network RPC and Chain ID configuration via environment variables
+      # Wallet addresses are configured in config.yaml
+
+      # Mainnet
+      NETWORK_MAINNET_RPC: "https://eth-mainnet.public.blastapi.io"
+      NETWORK_MAINNET_CHAIN_ID: "1"
+
+      # Surge Hoodi
+      NETWORK_HOODI_RPC: "https://l2-rpc.staging.surge.wtf"
+      NETWORK_HOODI_CHAIN_ID: "763374"
+
+      # Surge Hoodi Staging
+      NETWORK_HOODI_STAGING_RPC: "https://l2-rpc.hoodi.surge.wtf"
+      NETWORK_HOODI_STAGING_CHAIN_ID: "763375"
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+```
+
+Run:
+```bash
+docker-compose up -d
+```
+
+#### Manual Docker Run
+
 Build:
 ```bash
 docker build -t ethexporter:latest .
 ```
 
-Run:
+Run with mixed configuration:
+```bash
+docker run --rm -p 9100:9100 \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -e CONFIG_FILE="/app/config.yaml" \
+  -e NETWORK_MAINNET_RPC="https://eth-mainnet.public.blastapi.io" \
+  -e NETWORK_MAINNET_CHAIN_ID="1" \
+  -e NETWORK_HOODI_RPC="https://l2-rpc.staging.surge.wtf" \
+  -e NETWORK_HOODI_CHAIN_ID="763374" \
+  ethexporter:latest
+```
+
+#### Legacy Docker Run (Environment Variables Only)
+
 ```bash
 docker run --rm -p 9100:9100 \
   -e RPC=https://your-rpc-endpoint \
