@@ -1,17 +1,26 @@
 version: "3.9"
 services:
   ethexporter:
-    # build:
-    #   context: ..
-    #   dockerfile: docker/Dockerfile
-    image: ghcr.io/gehlotanish/ethexporter:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     platform: linux/amd64
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
     environment:
-      RPC: "https://eth-mainnet.public.blastapi.io"
-      PORT: "9100"
-      SLEEP_SECONDS: "15"
-      ethaddr_wallet1: "0xYourAddress1"
-      ETHADDR_wallet2: "0xYourAddress2"
+      CONFIG_FILE: "/app/config.yaml"
+
+      # Mainnet configuration via environment variables
+      NETWORK_MAINNET_RPC: "https://eth-mainnet.public.blastapi.io"
+      NETWORK_MAINNET_CHAIN_ID: "1"
+      NETWORK_MAINNET_ADDR_wallet1: "0xb2F801913949c3eecDfc814CCc743618efF1f8c8"
+      NETWORK_MAINNET_ADDR_wallet2: "0xa23D506848C30ea091B51258E00b1dC61BcD5cDb"
+
+      # Surge Hoodi configuration examples (commented out - use YAML config instead)
+      # NETWORK_SURGE_HOODI_RPC: "https://l2-rpc.staging.surge.wtf"
+      # NETWORK_SURGE_HOODI_CHAIN_ID: "763374"
+      # NETWORK_SURGE_HOODI_ADDR_wallet: "0x3bc256069FF9af461F3e04494A3ece3f62F183fC"
+
     ports:
       - "9100:9100"
     restart: unless-stopped
