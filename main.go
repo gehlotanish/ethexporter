@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 	"os"
@@ -135,7 +134,7 @@ func expandEnvVars(content string) string {
 }
 
 func LoadYAMLConfig(configPath string) (*YAMLConfig, error) {
-	data, err := ioutil.ReadFile(configPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %v", configPath, err)
 	}
